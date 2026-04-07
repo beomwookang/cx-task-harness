@@ -1,0 +1,11 @@
+timestamp,customer_message,agent_response,resolution_type,tags
+2026-01-15 09:30:00,"I want to cancel my order #12345","Sure, I can help with that. Let me look up your order.","resolved","order-cancel"
+2026-01-15 10:15:00,"Where is my package? Order #12346","Let me check the tracking for you. It shows your package is in transit.","resolved","delivery-tracking"
+2026-01-15 10:45:00,"I need to cancel order #12347","I've processed the cancellation. You'll receive a refund in 3-5 days.","resolved","order-cancel"
+2026-01-15 11:00:00,"Can I exchange this for a different size?","Of course! What size would you like instead?","resolved","exchange"
+2026-01-15 11:30:00,"Cancel my order please, order number 12348","Done! Your order has been cancelled and refund initiated.","resolved","order-cancel"
+2026-01-15 12:00:00,"My delivery is late, order #12349","I apologize for the delay. Let me check the status.","resolved","delivery-tracking"
+2026-01-15 12:30:00,"I want to return this item","I'd be happy to help with the return. Could you share your order number?","resolved","return"
+2026-01-15 13:00:00,"Please cancel order #12350","Cancellation processed. Refund will appear in 3-5 business days.","resolved","order-cancel"
+2026-01-15 13:30:00,"Do you have this in size M?","Let me check stock for you. Yes, size M is available!","resolved","stock-check"
+2026-01-15 14:00:00,"I need to cancel my recent order","Could you please provide the order number?","resolved","order-cancel"
