@@ -1,0 +1,12 @@
+{
+  "active": true,
+  "iteration": 1,
+  "max_iterations": 100,
+  "started_at": "2026-04-07T11:16:56.568Z",
+  "prompt": "/ralph subagent 방식으로 진행해",
+  "session_id": "f5714056-2e43-44af-bec6-3c7fefaa59e9",
+  "project_path": "/Volumes/SATECHI_SSD/Downloads/Projects/alf-fde",
+  "linked_ultrawork": true,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-07T11:16:56.569Z"
+}

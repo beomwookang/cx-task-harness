@@ -1,0 +1,245 @@
+{
+  "title": "cx-task-harness MCP Server Implementation",
+  "description": "Build an MCP server plugin for Claude Code that validates CX Task Specs and converts them to n8n workflows",
+  "plan": "docs/superpowers/plans/2026-04-07-cx-task-harness.md",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Project Scaffold",
+      "priority": 1,
+      "passes": true,
+      "acceptanceCriteria": [
+        "pyproject.toml exists with fastmcp, pydantic, jsonschema dependencies",
+        "src/cx_task_harness/__init__.py exists with __version__ = '0.1.0'",
+        "Directory structure created: src/cx_task_harness/{models,tools,n8n,templates/{ecommerce,travel,saas,medical}}",
+        "tests/conftest.py exists with minimal_task_spec_dict and order_cancel_task_spec_dict fixtures",
+        "uv sync --dev succeeds without errors",
+        "uv run pytest --co runs without import errors"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Common Pydantic Models",
+      "priority": 2,
+      "passes": true,
+      "acceptanceCriteria": [
+        "AgentInstruction model accepts role, conversation_flow, exit_conditions; exceptions defaults to []",
+        "BranchCondition model requires condition and next_step; variable/operator/value are optional",
+        "MemoryVariable rejects type values outside ['string','number','boolean','object','array']",
+        "TriggerFilter rejects operator values outside ['eq','neq','contains','gt','lt','in']",
+        "Trigger requires intent; keywords and filters default to []",
+        "AutomationPotential rejects score outside [0,1]",
+        "All tests in tests/test_models.py::TestAgentInstruction through TestAutomationPotential pass"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Step Types with Discriminated Union",
+      "priority": 3,
+      "passes": true,
+      "acceptanceCriteria": [
+        "7 step classes exist: AgentStep, CodeStep, MessageStep, ActionStep, FunctionStep, BranchStep, BrowserStep",
+        "Step = Annotated[...Discriminator('type')] correctly discriminates on 'type' field",
+        "BranchStep.next_step is always None (enforced by model)",
+        "TypeAdapter(Step).validate_python({'type':'agent',...}) returns AgentStep instance",
+        "TypeAdapter(Step).validate_python({'type':'nonexistent',...}) raises ValidationError",
+        "TypeAdapter(Step).validate_json(json_string) round-trips correctly",
+        "All tests in tests/test_models.py::TestStepTypes and TestStepDiscriminatedUnion pass"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "TaskSpec Top-level Model & Exports",
+      "priority": 4,
+      "passes": true,
+      "acceptanceCriteria": [
+        "TaskSpec parses minimal_task_spec_dict fixture successfully",
+        "TaskSpec parses order_cancel_task_spec_dict with 9 steps, resolving discriminated union types",
+        "TaskSpec.model_dump_json() → TaskSpec.model_validate_json() round-trips equal",
+        "TaskSpec rejects locale='fr' (only 'en' and 'ko' allowed)",
+        "SetupItem and TemplateSummary models exist in models/n8n.py",
+        "models/__init__.py re-exports all models; 'from cx_task_harness.models import TaskSpec' works",
+        "All tests in tests/test_models.py pass"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "validate_task_spec Tool",
+      "priority": 5,
+      "passes": true,
+      "acceptanceCriteria": [
+        "validate_task_spec returns {valid:true} for minimal and order_cancel specs",
+        "Returns error for invalid JSON input",
+        "Returns error when next_step references non-existent step ID",
+        "Returns error when branch target references non-existent step ID",
+        "Returns error for circular references (A→B→A)",
+        "Returns error when trigger intent is empty string",
+        "Returns error for duplicate memory variable keys",
+        "Returns error when AgentStep has empty exit_conditions",
+        "Returns warning for unreachable steps (valid:true with warning)",
+        "Returns warning for FunctionStep without on_failure (valid:true with warning)",
+        "All tests in tests/test_validator.py pass"
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "n8n Node Template Factories",
+      "priority": 6,
+      "passes": true,
+      "acceptanceCriteria": [
+        "make_manual_trigger() returns node with type 'n8n-nodes-base.manualTrigger'",
+        "make_set_node() returns node with assignments in n8n Set node format",
+        "make_code_node() with language='javascript' sets jsCode parameter",
+        "make_code_node() with language='python' sets pythonCode parameter",
+        "make_http_request_node() maps url, method, headers, body correctly",
+        "make_if_node() maps conditions to n8n IF node format",
+        "make_ai_agent_node() creates LangChain agent node with system message",
+        "All node factories return dicts with required fields: id, type, name, position, parameters, typeVersion",
+        "All tests in tests/test_n8n_nodes.py pass"
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "n8n Layout Algorithm",
+      "priority": 7,
+      "passes": true,
+      "acceptanceCriteria": [
+        "Linear chain A→B→C places nodes at increasing Y, same X",
+        "Branch A→[B,C] places B and C at same Y, different X",
+        "No two nodes share the same position coordinates",
+        "Empty graph does not crash",
+        "All tests in tests/test_layout.py pass"
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "TaskSpec → n8n Mapper",
+      "priority": 8,
+      "passes": true,
+      "acceptanceCriteria": [
+        "map_task_spec returns dict with 'nodes', 'connections', 'setup_required' keys",
+        "Minimal spec produces at least trigger + message step nodes",
+        "Order cancel spec produces HTTP Request nodes for FunctionSteps",
+        "Order cancel spec produces IF node for BranchStep",
+        "include_mock_data=True inserts [Mock] Code nodes for FunctionSteps",
+        "All connection source/target IDs reference existing node IDs",
+        "setup_required contains entries for FunctionStep nodes",
+        "All tests in tests/test_mapper.py pass"
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "convert_to_n8n Tool",
+      "priority": 9,
+      "passes": true,
+      "acceptanceCriteria": [
+        "convert_to_n8n returns {workflow: {...}, setup_required: [...]}",
+        "workflow.name matches TaskSpec.name",
+        "workflow.nodes all have position arrays with 2 integers",
+        "workflow.connections uses n8n format: {NodeName: {main: [[{node, type, index}]]}}",
+        "Invalid JSON input returns {error: ...}",
+        "include_mock_data=True produces more nodes than False",
+        "All tests in tests/test_converter.py pass"
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "n8n JSON Schema & validate_n8n Tool",
+      "priority": 10,
+      "passes": true,
+      "acceptanceCriteria": [
+        "tests/schemas/n8n_workflow.schema.json exists and is valid JSON Schema",
+        "validate_n8n returns {valid:true} for workflow produced by convert_to_n8n",
+        "validate_n8n returns {valid:false} for invalid JSON",
+        "validate_n8n returns {valid:false} for workflow missing 'nodes' field",
+        "validate_n8n returns {valid:false} for node missing 'position' field",
+        "validate_n8n always returns 'n8n_version' field",
+        "All tests in tests/test_n8n_validator.py pass"
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "First Template End-to-End (order_cancel)",
+      "priority": 11,
+      "passes": true,
+      "acceptanceCriteria": [
+        "src/cx_task_harness/templates/ecommerce/order_cancel.en.json exists and parses as valid TaskSpec",
+        "src/cx_task_harness/templates/ecommerce/order_cancel.ko.json exists and parses as valid TaskSpec",
+        "English template: validate → convert → validate_n8n all pass",
+        "Korean template: validate → convert → validate_n8n all pass",
+        "Snapshot test captures order_cancel.en.json conversion node summary",
+        "All tests in tests/test_converter.py::TestTemplateEndToEnd pass"
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "list_templates Tool",
+      "priority": 12,
+      "passes": true,
+      "acceptanceCriteria": [
+        "list_templates() returns templates with at least order_cancel entries",
+        "list_templates(industry='ecommerce') filters by industry",
+        "list_templates(locale='ko') filters by locale",
+        "Each template summary has: id, name, description, industry, locale, steps_count, step_types",
+        "get_template('ecommerce/order_cancel', 'en') returns JSON string",
+        "All returned templates validate as valid TaskSpecs",
+        "All tests in tests/test_templates.py pass"
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "FastMCP Server",
+      "priority": 13,
+      "passes": true,
+      "acceptanceCriteria": [
+        "server.py defines mcp = FastMCP('cx-task-harness')",
+        "mcp.call_tool('validate_task_spec', ...) returns valid JSON response",
+        "mcp.call_tool('convert_to_n8n', ...) returns workflow JSON",
+        "mcp.call_tool('validate_n8n', ...) returns validation result",
+        "mcp.call_tool('list_templates', ...) returns template list",
+        "Template resource URI template://ecommerce/order_cancel/en returns content",
+        "All tests in tests/test_server.py pass"
+      ]
+    },
+    {
+      "id": "US-014",
+      "title": "Remaining Templates (7 × 2 locales)",
+      "priority": 14,
+      "passes": true,
+      "acceptanceCriteria": [
+        "14 additional template files exist (7 templates × 2 locales)",
+        "list_templates(locale='en') returns exactly 8 templates",
+        "list_templates(locale='ko') returns exactly 8 templates",
+        "All 16 template files parse as valid TaskSpec",
+        "All 16 templates pass full pipeline: validate → convert → validate_n8n",
+        "All tests in tests/test_templates.py::TestAllTemplatesPipeline pass"
+      ]
+    },
+    {
+      "id": "US-015",
+      "title": "Claude Code Native (CLAUDE.md & Slash Commands)",
+      "priority": 15,
+      "passes": true,
+      "acceptanceCriteria": [
+        "claude/CLAUDE.md exists with MCP tool usage rules and pipeline guide",
+        "claude/commands/analyze.md exists with support data analysis prompt",
+        "claude/commands/design.md exists with TaskSpec generation prompt",
+        "claude/commands/guide.md exists with n8n setup guide prompt",
+        "All four files are non-empty markdown with clear structure"
+      ]
+    },
+    {
+      "id": "US-016",
+      "title": "README, Docs & Sample Fixture",
+      "priority": 16,
+      "passes": true,
+      "acceptanceCriteria": [
+        "README.md exists with Quick Start, MCP Tools table, Templates list, Development section",
+        "docs/TASK_SPEC.md exists with schema reference table",
+        "tests/fixtures/sample_support_logs.csv exists with at least 10 rows",
+        "uv run pytest -v shows ALL tests passing",
+        "No import errors or warnings in test collection"
+      ]
+    }
+  ]
+}
