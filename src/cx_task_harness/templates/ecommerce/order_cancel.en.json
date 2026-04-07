@@ -1,0 +1,107 @@
+{
+  "id": "ecommerce-order-cancel",
+  "name": "Order Cancellation & Refund",
+  "description": "Handles customer order cancellation requests, checks order status, and processes refunds",
+  "industry": "ecommerce",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to cancel an order",
+    "keywords": ["cancel", "cancellation", "cancel order", "refund", "void order"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "The order ID to cancel"},
+    {"key": "cancel_reason", "type": "string", "description": "Reason for cancellation"}
+  ],
+  "steps": [
+    {
+      "id": "greet_and_collect",
+      "name": "Greet and Collect Order Info",
+      "type": "agent",
+      "instructions": {
+        "role": "Friendly customer support agent handling order cancellations",
+        "conversation_flow": [
+          "Greet the customer warmly",
+          "Ask for the order ID or order number",
+          "Ask for the reason for cancellation",
+          "Confirm the cancellation request with the customer"
+        ],
+        "exit_conditions": ["Order ID and cancellation reason are both collected and confirmed by customer"],
+        "exceptions": [
+          "If customer does not know the order ID, ask for the email address to look it up",
+          "If customer is upset, acknowledge their frustration before proceeding"
+        ]
+      },
+      "next_step": "check_order"
+    },
+    {
+      "id": "check_order",
+      "name": "Check Order Status",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_cancelable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_cancelable",
+      "name": "Check if Order is Cancelable",
+      "type": "branch",
+      "branches": [
+        {"condition": "Order is still pending or processing", "variable": "order_status", "operator": "in", "value": "pending,processing", "next_step": "cancel_order"},
+        {"condition": "Order has already been shipped", "variable": "order_status", "operator": "eq", "value": "shipped", "next_step": "shipped_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "cancel_order",
+      "name": "Execute Cancellation",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/cancel",
+      "function_method": "POST",
+      "function_body": {"reason": "{{cancel_reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "Confirm Cancellation",
+      "type": "message",
+      "message_content": "Your order {{order_id}} has been successfully cancelled. A refund will be processed within 3-5 business days.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "shipped_message",
+      "name": "Already Shipped Notice",
+      "type": "message",
+      "message_content": "Your order {{order_id}} has already been shipped and cannot be cancelled. Would you like to initiate a return instead?",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["order-cancelled", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "returns-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I encountered an issue processing your request. Let me connect you with a human agent who can help.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.92,
+    "reasoning": "Order cancellation is a highly repetitive, rule-based process with clear decision points",
+    "estimated_resolution_rate": 0.80
+  }
+}

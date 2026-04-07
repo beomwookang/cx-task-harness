@@ -1,0 +1,99 @@
+{
+  "id": "ecommerce-order-cancel",
+  "name": "주문 취소 및 환불",
+  "description": "고객의 주문 취소 요청을 처리하고, 주문 상태를 확인한 후 환불을 진행합니다",
+  "industry": "ecommerce",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 주문을 취소하고 싶어합니다",
+    "keywords": ["취소", "주문취소", "환불", "주문 취소해주세요", "캔슬"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "취소할 주문 번호"},
+    {"key": "cancel_reason", "type": "string", "description": "취소 사유"}
+  ],
+  "steps": [
+    {
+      "id": "greet_and_collect",
+      "name": "인사 및 주문 정보 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 고객 상담 에이전트 (주문 취소 담당)",
+        "conversation_flow": ["고객에게 친절하게 인사합니다", "주문 번호를 확인합니다", "취소 사유를 여쭤봅니다", "취소 요청을 고객과 최종 확인합니다"],
+        "exit_conditions": ["주문 번호와 취소 사유가 모두 수집되고 고객이 확인함"],
+        "exceptions": ["주문 번호를 모르는 경우, 이메일 주소로 조회를 안내합니다", "고객이 불만을 표현하는 경우, 먼저 공감한 후 진행합니다"]
+      },
+      "next_step": "check_order"
+    },
+    {
+      "id": "check_order",
+      "name": "주문 상태 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_cancelable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_cancelable",
+      "name": "취소 가능 여부 확인",
+      "type": "branch",
+      "branches": [
+        {"condition": "주문이 대기 중이거나 처리 중인 경우", "variable": "order_status", "operator": "in", "value": "pending,processing", "next_step": "cancel_order"},
+        {"condition": "이미 배송된 경우", "variable": "order_status", "operator": "eq", "value": "shipped", "next_step": "shipped_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "cancel_order",
+      "name": "취소 실행",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/cancel",
+      "function_method": "POST",
+      "function_body": {"reason": "{{cancel_reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "취소 완료 안내",
+      "type": "message",
+      "message_content": "주문 {{order_id}}이(가) 성공적으로 취소되었습니다. 환불은 3~5 영업일 내에 처리됩니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "shipped_message",
+      "name": "배송 완료 안내",
+      "type": "message",
+      "message_content": "주문 {{order_id}}은(는) 이미 배송이 시작되어 취소가 불가합니다. 반품 절차를 안내해 드릴까요?",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["주문취소", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "반품팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 요청을 처리하는 중 문제가 발생했습니다. 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.92,
+    "reasoning": "주문 취소는 반복적이고 규칙 기반의 프로세스로, 명확한 분기점이 있어 자동화에 적합합니다",
+    "estimated_resolution_rate": 0.80
+  }
+}
