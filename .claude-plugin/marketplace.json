@@ -3,6 +3,10 @@
   "owner": {
     "name": "beomwookang"
   },
+  "metadata": {
+    "description": "Customer Support Automation Architect for Claude Code",
+    "version": "0.1.0"
+  },
   "plugins": [
     {
       "name": "cx-task-harness",

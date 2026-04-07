@@ -5,10 +5,6 @@
   "author": {
     "name": "beomwookang"
   },
-  "repository": "https://github.com/beomwookang/cx-task-harness",
-  "homepage": "https://github.com/beomwookang/cx-task-harness",
   "license": "MIT",
-  "keywords": ["cx", "customer-support", "automation", "n8n", "task-spec", "mcp"],
-  "skills": "./skills/",
-  "mcpServers": "./.mcp.json"
+  "keywords": ["cx", "customer-support", "automation", "n8n", "task-spec", "mcp"]
 }
