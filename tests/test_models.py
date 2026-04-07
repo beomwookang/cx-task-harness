@@ -238,3 +238,64 @@ class TestStepDiscriminatedUnion:
         json_str = json.dumps({"id": "s1", "name": "Code", "type": "code", "code": "return 1;"})
         step = adapter.validate_json(json_str)
         assert step.type == "code"
+
+
+class TestTaskSpec:
+    def test_minimal(self, minimal_task_spec_dict):
+        from cx_task_harness.models.task_spec import TaskSpec
+
+        spec = TaskSpec(**minimal_task_spec_dict)
+        assert spec.id == "test-task"
+        assert spec.locale == "en"
+        assert spec.memory == []
+        assert spec.automation_potential is None
+        assert len(spec.steps) == 1
+
+    def test_full_order_cancel(self, order_cancel_task_spec_dict):
+        from cx_task_harness.models.task_spec import TaskSpec
+
+        spec = TaskSpec(**order_cancel_task_spec_dict)
+        assert spec.id == "ecommerce-order-cancel"
+        assert spec.industry == "ecommerce"
+        assert len(spec.memory) == 2
+        assert len(spec.steps) == 9
+        assert spec.steps[0].__class__.__name__ == "AgentStep"
+        assert spec.steps[1].__class__.__name__ == "FunctionStep"
+        assert spec.steps[2].__class__.__name__ == "BranchStep"
+
+    def test_roundtrip_json(self, minimal_task_spec_dict):
+        from cx_task_harness.models.task_spec import TaskSpec
+
+        spec = TaskSpec(**minimal_task_spec_dict)
+        json_str = spec.model_dump_json()
+        spec2 = TaskSpec.model_validate_json(json_str)
+        assert spec == spec2
+
+    def test_korean_locale(self, minimal_task_spec_dict):
+        from cx_task_harness.models.task_spec import TaskSpec
+
+        minimal_task_spec_dict["locale"] = "ko"
+        spec = TaskSpec(**minimal_task_spec_dict)
+        assert spec.locale == "ko"
+
+    def test_invalid_locale(self, minimal_task_spec_dict):
+        from cx_task_harness.models.task_spec import TaskSpec
+
+        minimal_task_spec_dict["locale"] = "fr"
+        with pytest.raises(ValidationError):
+            TaskSpec(**minimal_task_spec_dict)
+
+
+class TestN8nModels:
+    def test_setup_item(self):
+        from cx_task_harness.models.n8n import SetupItem
+
+        item = SetupItem(node_id="func_1", node_name="Order API", type="credential", description="API key needed", fields=["api_key", "base_url"])
+        assert item.node_id == "func_1"
+        assert len(item.fields) == 2
+
+    def test_template_summary(self):
+        from cx_task_harness.models.n8n import TemplateSummary
+
+        ts = TemplateSummary(id="ecommerce/order-cancel", name="Order Cancellation", description="Handle order cancellations", industry="ecommerce", locale="en", steps_count=9, step_types=["agent", "function", "branch", "action"])
+        assert ts.id == "ecommerce/order-cancel"
