@@ -1,7 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "cx-task-harness",
-  "description": "Customer Support Automation Architect for Claude Code",
   "owner": {
     "name": "beomwookang"
   },
@@ -16,11 +14,7 @@
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/beomwookang/cx-task-harness",
-      "repository": "https://github.com/beomwookang/cx-task-harness",
-      "license": "MIT",
-      "keywords": ["cx", "customer-support", "automation", "n8n", "task-spec"],
       "tags": ["mcp", "n8n", "automation", "customer-support", "templates"]
     }
-  ],
-  "version": "1.0.0"
+  ]
 }
