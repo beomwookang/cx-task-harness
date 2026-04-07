@@ -124,3 +124,117 @@ class TestAutomationPotential:
 
         with pytest.raises(ValidationError):
             AutomationPotential(score=-0.1, reasoning="Too low")
+
+
+import json
+
+
+class TestStepTypes:
+    def test_agent_step(self):
+        from cx_task_harness.models.steps import AgentStep
+
+        step = AgentStep(
+            id="greet",
+            name="Greet Customer",
+            instructions={
+                "role": "Support agent",
+                "conversation_flow": ["Greet"],
+                "exit_conditions": ["Done"],
+            },
+            next_step="next",
+        )
+        assert step.type == "agent"
+        assert step.instructions.role == "Support agent"
+
+    def test_code_step(self):
+        from cx_task_harness.models.steps import CodeStep
+
+        step = CodeStep(id="validate", name="Validate Input", code="return items.length > 0;")
+        assert step.type == "code"
+        assert step.language == "javascript"
+
+    def test_code_step_python(self):
+        from cx_task_harness.models.steps import CodeStep
+
+        step = CodeStep(id="validate", name="Validate", code="return len(items) > 0", language="python")
+        assert step.language == "python"
+
+    def test_message_step(self):
+        from cx_task_harness.models.steps import MessageStep
+
+        step = MessageStep(id="msg", name="Send Message", message_content="Hello!")
+        assert step.type == "message"
+
+    def test_action_step(self):
+        from cx_task_harness.models.steps import ActionStep
+
+        step = ActionStep(id="close", name="Close", action_type="close", action_params={"tags": ["done"]})
+        assert step.type == "action"
+        assert step.action_params == {"tags": ["done"]}
+
+    def test_function_step(self):
+        from cx_task_harness.models.steps import FunctionStep
+
+        step = FunctionStep(id="api_call", name="Call API", function_url="https://api.example.com/orders", function_method="GET")
+        assert step.type == "function"
+        assert step.function_headers == {}
+        assert step.function_body is None
+
+    def test_branch_step(self):
+        from cx_task_harness.models.steps import BranchStep
+
+        step = BranchStep(
+            id="check", name="Check Status",
+            branches=[
+                {"condition": "Is active", "next_step": "active_path"},
+                {"condition": "Is inactive", "next_step": "inactive_path"},
+            ],
+            default_branch="fallback",
+        )
+        assert step.type == "branch"
+        assert step.next_step is None
+        assert len(step.branches) == 2
+
+    def test_browser_step(self):
+        from cx_task_harness.models.steps import BrowserStep
+
+        step = BrowserStep(id="automate", name="Browser Action", url="https://admin.example.com", actions=[{"action": "click", "selector": "#btn"}])
+        assert step.type == "browser"
+
+
+class TestStepDiscriminatedUnion:
+    def test_parse_agent_step(self):
+        from pydantic import TypeAdapter
+        from cx_task_harness.models.steps import Step
+
+        adapter = TypeAdapter(Step)
+        data = {"id": "s1", "name": "Agent", "type": "agent", "instructions": {"role": "Agent", "conversation_flow": ["Step 1"], "exit_conditions": ["Done"]}}
+        step = adapter.validate_python(data)
+        assert step.type == "agent"
+        assert step.__class__.__name__ == "AgentStep"
+
+    def test_parse_message_step(self):
+        from pydantic import TypeAdapter
+        from cx_task_harness.models.steps import Step
+
+        adapter = TypeAdapter(Step)
+        data = {"id": "s1", "name": "Msg", "type": "message", "message_content": "Hi"}
+        step = adapter.validate_python(data)
+        assert step.__class__.__name__ == "MessageStep"
+
+    def test_parse_invalid_type(self):
+        from pydantic import TypeAdapter, ValidationError
+        from cx_task_harness.models.steps import Step
+
+        adapter = TypeAdapter(Step)
+        with pytest.raises(ValidationError):
+            adapter.validate_python({"id": "s1", "name": "Bad", "type": "nonexistent"})
+
+    def test_parse_from_json_string(self):
+        from pydantic import TypeAdapter
+        from cx_task_harness.models.steps import Step
+
+        adapter = TypeAdapter(Step)
+        json_str = json.dumps({"id": "s1", "name": "Code", "type": "code", "code": "return 1;"})
+        step = adapter.validate_json(json_str)
+        assert step.type == "code"
