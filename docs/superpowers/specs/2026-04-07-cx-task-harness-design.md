@@ -88,7 +88,10 @@ class MessageStep(StepBase):
 
 class ActionStep(StepBase):
     type: Literal["action"] = "action"
-    action_type: str                        # "assign_team", "set_tag", "close"
+    action_type: str                        # open enum — extensible per platform
+    # Known values: "assign_team", "set_tag", "remove_tag", "close",
+    #               "reopen", "set_priority", "add_note"
+    # Intentionally not a Literal enum — platforms define their own actions.
     action_params: dict = Field(default_factory=dict)
 
 class FunctionStep(StepBase):
@@ -108,6 +111,14 @@ class BrowserStep(StepBase):
     type: Literal["browser"] = "browser"
     url: str
     actions: list[dict]
+    # Each action dict follows: {"action": str, "selector"?: str, "value"?: str}
+    # Example:
+    # [
+    #   {"action": "navigate", "value": "https://admin.example.com/orders"},
+    #   {"action": "fill", "selector": "#order-id", "value": "{{order_id}}"},
+    #   {"action": "click", "selector": "#cancel-btn"},
+    #   {"action": "wait", "selector": ".confirmation-msg"}
+    # ]
 ```
 
 ### 3.3 Discriminated Union
