@@ -93,14 +93,13 @@ LLM-driven tasks (analysis, design) stay in Claude Code where prompts can be ite
 
 ## Installation
 
-### Plugin Marketplace (Recommended)
+### Via Marketplace (Recommended)
 
-```bash
-# Add marketplace
-claude plugin add marketplace cx-task-harness --url https://github.com/beomwookang/cx-task-harness
+In your Claude Code session:
 
-# Install plugin
-claude plugin install cx-task-harness/cx-task-harness
+```
+/plugin marketplace add beomwookang/cx-task-harness
+/plugin install cx-task-harness@cx-task-harness
 ```
 
 This automatically registers:
@@ -108,23 +107,10 @@ This automatically registers:
 - 3 slash commands (`/cx-task-harness:analyze`, `/cx-task-harness:design`, `/cx-task-harness:guide`)
 - Template resources accessible via MCP
 
-### Manual MCP Setup
-
-If you prefer manual installation:
+### Direct Installation as Global Skill
 
 ```bash
-# Clone the repository
-git clone https://github.com/beomwookang/cx-task-harness.git
-
-# Add as MCP server
-claude mcp add cx-task-harness \
-  -- uv run --directory ./cx-task-harness \
-  --with fastmcp --with pydantic --with jsonschema \
-  fastmcp run cx-task-harness/src/cx_task_harness/server.py
-
-# Copy slash commands (optional)
-cp cx-task-harness/claude/CLAUDE.md your-project/CLAUDE.md
-cp -r cx-task-harness/claude/commands/ your-project/.claude/commands/
+cp -r skills/cx-task-harness ~/.claude/skills/cx-task-harness
 ```
 
 ## Use Cases
