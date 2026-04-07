@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "cx-task-harness": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory", "${CLAUDE_PLUGIN_ROOT}",
+        "--with", "fastmcp",
+        "--with", "pydantic",
+        "--with", "jsonschema",
+        "fastmcp",
+        "run",
+        "${CLAUDE_PLUGIN_ROOT}/src/cx_task_harness/server.py"
+      ],
+      "timeout": 60
+    }
+  }
+}

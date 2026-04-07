@@ -93,40 +93,38 @@ LLM 기반 작업(분석, 설계)은 프롬프트를 즉시 반복할 수 있는
 
 ## 설치
 
-### Claude Code MCP 플러그인으로 설치
+### 플러그인 마켓플레이스 (권장)
 
 ```bash
-# MCP를 통해 설치
+# 마켓플레이스 추가
+claude plugin add marketplace cx-task-harness --url https://github.com/beomwookang/cx-task-harness
+
+# 플러그인 설치
+claude plugin install cx-task-harness/cx-task-harness
+```
+
+설치 시 자동으로 등록됩니다:
+- MCP 도구 4개 (`validate_task_spec`, `convert_to_n8n`, `validate_n8n`, `list_templates`)
+- 슬래시 커맨드 3개 (`/cx-task-harness:analyze`, `/cx-task-harness:design`, `/cx-task-harness:guide`)
+- MCP를 통해 접근 가능한 템플릿 리소스
+
+### 수동 MCP 설정
+
+수동 설치를 원하는 경우:
+
+```bash
+# 저장소 클론
+git clone https://github.com/beomwookang/cx-task-harness.git
+
+# MCP 서버로 추가
 claude mcp add cx-task-harness \
-  -- uv run --with fastmcp --with pydantic --with jsonschema \
-  fastmcp run src/cx_task_harness/server.py
-```
+  -- uv run --directory ./cx-task-harness \
+  --with fastmcp --with pydantic --with jsonschema \
+  fastmcp run cx-task-harness/src/cx_task_harness/server.py
 
-### 슬래시 커맨드 (선택 사항)
-
-가이드 워크플로우를 위한 슬래시 커맨드를 프로젝트에 복사합니다:
-
-```bash
-# cx-task-harness 디렉터리에서 실행
-cp claude/CLAUDE.md your-project/CLAUDE.md        # 또는 기존 파일에 병합
-cp -r claude/commands/ your-project/.claude/commands/
-```
-
-이렇게 하면 Claude Code에서 세 가지 커맨드를 사용할 수 있습니다:
-
-| 커맨드 | 설명 |
-|--------|------|
-| `/analyze` | 지원 로그를 분석하고 자동화 기회를 식별 |
-| `/design` | 자연어 시나리오로부터 CX Task Spec 설계 |
-| `/guide` | n8n 워크플로우 설정 가이드 생성 |
-
-### 소스에서 설치
-
-```bash
-git clone https://github.com/your-username/cx-task-harness.git
-cd cx-task-harness
-uv sync --dev
-uv run python -m pytest -v  # 88개 테스트
+# 슬래시 커맨드 복사 (선택 사항)
+cp cx-task-harness/claude/CLAUDE.md your-project/CLAUDE.md
+cp -r cx-task-harness/claude/commands/ your-project/.claude/commands/
 ```
 
 ## 활용 사례

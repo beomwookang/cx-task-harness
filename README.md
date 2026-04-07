@@ -93,40 +93,38 @@ LLM-driven tasks (analysis, design) stay in Claude Code where prompts can be ite
 
 ## Installation
 
-### As Claude Code MCP Plugin
+### Plugin Marketplace (Recommended)
 
 ```bash
-# Install via MCP
+# Add marketplace
+claude plugin add marketplace cx-task-harness --url https://github.com/beomwookang/cx-task-harness
+
+# Install plugin
+claude plugin install cx-task-harness/cx-task-harness
+```
+
+This automatically registers:
+- 4 MCP tools (`validate_task_spec`, `convert_to_n8n`, `validate_n8n`, `list_templates`)
+- 3 slash commands (`/cx-task-harness:analyze`, `/cx-task-harness:design`, `/cx-task-harness:guide`)
+- Template resources accessible via MCP
+
+### Manual MCP Setup
+
+If you prefer manual installation:
+
+```bash
+# Clone the repository
+git clone https://github.com/beomwookang/cx-task-harness.git
+
+# Add as MCP server
 claude mcp add cx-task-harness \
-  -- uv run --with fastmcp --with pydantic --with jsonschema \
-  fastmcp run src/cx_task_harness/server.py
-```
+  -- uv run --directory ./cx-task-harness \
+  --with fastmcp --with pydantic --with jsonschema \
+  fastmcp run cx-task-harness/src/cx_task_harness/server.py
 
-### Slash Commands (Optional)
-
-Copy the slash commands to your project for guided workflows:
-
-```bash
-# From the cx-task-harness directory
-cp claude/CLAUDE.md your-project/CLAUDE.md        # or merge with existing
-cp -r claude/commands/ your-project/.claude/commands/
-```
-
-This gives you three commands in Claude Code:
-
-| Command | Description |
-|---------|-------------|
-| `/analyze` | Analyze support logs and identify automation opportunities |
-| `/design` | Design a CX Task Spec from a natural language scenario |
-| `/guide` | Generate an n8n workflow setup guide |
-
-### From Source
-
-```bash
-git clone https://github.com/your-username/cx-task-harness.git
-cd cx-task-harness
-uv sync --dev
-uv run python -m pytest -v  # 88 tests
+# Copy slash commands (optional)
+cp cx-task-harness/claude/CLAUDE.md your-project/CLAUDE.md
+cp -r cx-task-harness/claude/commands/ your-project/.claude/commands/
 ```
 
 ## Use Cases
