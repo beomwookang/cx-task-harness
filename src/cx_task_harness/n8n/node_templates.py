@@ -93,6 +93,28 @@ def make_if_node(node_id: str, name: str, conditions: list[dict]) -> dict:
     return node
 
 
+def make_switch_node(node_id: str, name: str, conditions: list[dict]) -> dict:
+    """Creates an n8n Switch node that supports N output branches."""
+    node = _base_node(node_id, name, "n8n-nodes-base.switch", type_version=3)
+    rules = []
+    for i, cond in enumerate(conditions):
+        rules.append({
+            "id": f"{node_id}_rule_{i}",
+            "leftValue": f"={{{{ $json.{cond.get('variable', 'value')} }}}}",
+            "rightValue": cond.get("value", ""),
+            "operator": {
+                "type": "string",
+                "operation": _map_operator(cond.get("operator", "eq")),
+            },
+            "output": i,
+        })
+    node["parameters"] = {
+        "rules": {"rules": rules},
+        "options": {},
+    }
+    return node
+
+
 def make_ai_agent_node(node_id: str, name: str, system_message: str) -> dict:
     node = _base_node(node_id, name, "@n8n/n8n-nodes-langchain.agent", type_version=1)
     node["parameters"] = {

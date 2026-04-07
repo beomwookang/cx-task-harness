@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "n8n Workflow",
+  "description": "Minimal schema for n8n workflow validation (target: n8n 1.x)",
+  "type": "object",
+  "required": ["name", "nodes", "connections"],
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type", "position", "parameters"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "type": {"type": "string"},
+          "typeVersion": {"type": "integer", "minimum": 1},
+          "position": {
+            "type": "array",
+            "items": {"type": "number"},
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "parameters": {"type": "object"}
+        }
+      }
+    },
+    "connections": {"type": "object"},
+    "active": {"type": "boolean"},
+    "settings": {"type": "object"},
+    "tags": {"type": "array"},
+    "meta": {"type": "object"}
+  }
+}

@@ -18,7 +18,7 @@ class TestMapper:
         spec = TaskSpec(**order_cancel_task_spec_dict)
         result = map_task_spec(spec, include_mock_data=False)
         assert any("n8n-nodes-base.httpRequest" in n["type"] for n in result["nodes"])
-        assert any("n8n-nodes-base.if" in n["type"] for n in result["nodes"])
+        assert any("n8n-nodes-base.switch" in n["type"] for n in result["nodes"])
         assert len(result["setup_required"]) > 0
 
     def test_mock_data_insertion(self, order_cancel_task_spec_dict):

@@ -11,6 +11,7 @@ from cx_task_harness.models.task_spec import TaskSpec
 from cx_task_harness.n8n.node_templates import (
     make_ai_agent_node, make_code_node, make_http_request_node,
     make_if_node, make_manual_trigger, make_mock_response_node, make_set_node,
+    make_switch_node,
 )
 
 
@@ -87,7 +88,7 @@ def map_task_spec(spec: TaskSpec, include_mock_data: bool = True) -> dict:
                     "operator": branch.operator or "eq",
                     "value": branch.value or "",
                 })
-            node = make_if_node(node_id, step.name, conditions)
+            node = make_switch_node(node_id, step.name, conditions)
             nodes.append(node)
 
         elif isinstance(step, BrowserStep):
@@ -105,9 +106,12 @@ def map_task_spec(spec: TaskSpec, include_mock_data: bool = True) -> dict:
         first_step_node = step_node_ids[spec.steps[0].id]
         connections.setdefault(first_connection_source, []).append(first_step_node)
 
+    branch_node_ids: set[str] = set()
+
     for step in spec.steps:
         src = step_node_ids[step.id]
         if isinstance(step, BranchStep):
+            branch_node_ids.add(src)
             for branch in step.branches:
                 if branch.next_step in step_node_ids:
                     connections.setdefault(src, []).append(step_node_ids[branch.next_step])
@@ -116,10 +120,15 @@ def map_task_spec(spec: TaskSpec, include_mock_data: bool = True) -> dict:
         else:
             if step.next_step and step.next_step in step_node_ids:
                 connections.setdefault(src, []).append(step_node_ids[step.next_step])
-        if step.on_failure and step.on_failure in step_node_ids:
-            connections.setdefault(src, []).append(step_node_ids[step.on_failure])
+            if step.on_failure and step.on_failure in step_node_ids:
+                connections.setdefault(src, []).append(step_node_ids[step.on_failure])
 
-    return {"nodes": nodes, "connections": connections, "setup_required": setup_required}
+    return {
+        "nodes": nodes,
+        "connections": connections,
+        "setup_required": setup_required,
+        "branch_node_ids": branch_node_ids,
+    }
 
 
 def _build_agent_system_message(step: AgentStep) -> str:

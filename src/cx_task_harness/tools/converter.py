@@ -31,7 +31,9 @@ def convert_to_n8n(
 
     compute_layout(map_result["nodes"], map_result["connections"], start_id="trigger")
 
-    n8n_connections = _build_n8n_connections(map_result["nodes"], map_result["connections"])
+    n8n_connections = _build_n8n_connections(
+        map_result["nodes"], map_result["connections"], map_result.get("branch_node_ids"),
+    )
 
     workflow = {
         "name": spec.name,
@@ -50,16 +52,32 @@ def convert_to_n8n(
     return {"workflow": workflow, "setup_required": map_result["setup_required"]}
 
 
-def _build_n8n_connections(nodes: list[dict], connections: dict[str, list[str]]) -> dict:
+def _build_n8n_connections(
+    nodes: list[dict],
+    connections: dict[str, list[str]],
+    branch_node_ids: set[str] | None = None,
+) -> dict:
+    branch_node_ids = branch_node_ids or set()
     node_name_by_id = {n["id"]: n["name"] for n in nodes}
     n8n_conns: dict = {}
 
     for src_id, target_ids in connections.items():
         src_name = node_name_by_id.get(src_id, src_id)
-        outputs: list[list[dict]] = []
-        for target_id in target_ids:
-            target_name = node_name_by_id.get(target_id, target_id)
-            outputs.append([{"node": target_name, "type": "main", "index": 0}])
+
+        if src_id in branch_node_ids:
+            # Each target gets its own output index (Switch node)
+            outputs: list[list[dict]] = []
+            for target_id in target_ids:
+                target_name = node_name_by_id.get(target_id, target_id)
+                outputs.append([{"node": target_name, "type": "main", "index": 0}])
+        else:
+            # All targets share output index 0
+            output_0: list[dict] = []
+            for target_id in target_ids:
+                target_name = node_name_by_id.get(target_id, target_id)
+                output_0.append({"node": target_name, "type": "main", "index": 0})
+            outputs = [output_0] if output_0 else []
+
         if outputs:
             n8n_conns[src_name] = {"main": outputs}
 

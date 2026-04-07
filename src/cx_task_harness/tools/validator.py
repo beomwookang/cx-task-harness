@@ -74,8 +74,7 @@ def validate_task_spec(task_spec: str) -> dict:
                 )
 
     # 5. Circular reference detection
-    if not errors:
-        _check_circular(spec, errors)
+    _check_circular(spec, errors)
 
     # 6. Warnings: unreachable steps
     reachable = _find_reachable_steps(spec)
