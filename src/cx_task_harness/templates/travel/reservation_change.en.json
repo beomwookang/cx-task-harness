@@ -1,0 +1,108 @@
+{
+  "id": "travel-reservation-change",
+  "name": "Reservation Modification",
+  "description": "Handles customer requests to modify travel reservations including dates, guests, and room types",
+  "industry": "travel",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to change or modify an existing reservation",
+    "keywords": ["change reservation", "modify booking", "reschedule", "change dates", "update booking"]
+  },
+  "memory": [
+    {"key": "reservation_id", "type": "string", "description": "The reservation ID to modify"},
+    {"key": "change_details", "type": "string", "description": "Details of the requested changes"},
+    {"key": "changeable", "type": "string", "description": "Whether the reservation can be changed"}
+  ],
+  "steps": [
+    {
+      "id": "collect_info",
+      "name": "Collect Reservation Info and Changes",
+      "type": "agent",
+      "instructions": {
+        "role": "Professional travel support agent handling reservation modifications",
+        "conversation_flow": [
+          "Greet the customer",
+          "Ask for the reservation ID or booking reference",
+          "Ask what changes they would like to make (dates, guests, room type, etc.)",
+          "Confirm the reservation ID and desired changes with the customer"
+        ],
+        "exit_conditions": ["Reservation ID and the specific changes requested are both collected and confirmed"],
+        "exceptions": [
+          "If the customer doesn't have the reservation ID, ask for their name and check-in date",
+          "If the customer wants multiple changes, collect all changes before proceeding"
+        ]
+      },
+      "next_step": "check_reservation"
+    },
+    {
+      "id": "check_reservation",
+      "name": "Check Reservation Status",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/changeability",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_changeable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_changeable",
+      "name": "Branch by Changeability",
+      "type": "branch",
+      "branches": [
+        {"condition": "Reservation can be changed", "variable": "changeable", "operator": "eq", "value": "yes", "next_step": "apply_changes"},
+        {"condition": "Reservation cannot be changed", "variable": "changeable", "operator": "eq", "value": "no", "next_step": "not_changeable_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "apply_changes",
+      "name": "Apply Changes to Reservation",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/modify",
+      "function_method": "POST",
+      "function_body": {"changes": "{{change_details}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "Confirm Changes",
+      "type": "message",
+      "message_content": "Your reservation {{reservation_id}} has been successfully updated. A confirmation email with your new booking details will be sent shortly.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "not_changeable_message",
+      "name": "Cannot Change Reservation",
+      "type": "message",
+      "message_content": "We're sorry, your reservation {{reservation_id}} cannot be modified at this time due to the booking policy. A human agent will assist you with your options.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["reservation-change", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "reservations-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I encountered an issue processing your request. Let me connect you with a human agent who can help.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.80,
+    "reasoning": "Reservation changes follow defined rules but often require policy checks and may need human intervention for complex cases",
+    "estimated_resolution_rate": 0.70
+  }
+}

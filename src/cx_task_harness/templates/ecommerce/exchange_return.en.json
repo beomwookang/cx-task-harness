@@ -1,0 +1,112 @@
+{
+  "id": "ecommerce-exchange-return",
+  "name": "Exchange & Return Processing",
+  "description": "Handles customer exchange and return requests, checks order eligibility, and processes accordingly",
+  "industry": "ecommerce",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to exchange or return a product",
+    "keywords": ["exchange", "return", "swap", "replace", "send back", "refund item"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "The order ID for the exchange or return"},
+    {"key": "request_type", "type": "string", "description": "Whether customer wants exchange or return"},
+    {"key": "reason", "type": "string", "description": "Reason for the exchange or return"}
+  ],
+  "steps": [
+    {
+      "id": "collect_info",
+      "name": "Collect Exchange/Return Info",
+      "type": "agent",
+      "instructions": {
+        "role": "Friendly customer support agent handling exchanges and returns",
+        "conversation_flow": [
+          "Greet the customer warmly",
+          "Ask whether they want an exchange or a return",
+          "Ask for the order ID",
+          "Ask for the reason for the exchange or return",
+          "Confirm the request details with the customer"
+        ],
+        "exit_conditions": ["Order ID, request type (exchange or return), and reason are all collected and confirmed"],
+        "exceptions": [
+          "If the customer doesn't know their order ID, offer to look it up by email",
+          "If the customer is upset, empathize before proceeding"
+        ]
+      },
+      "next_step": "check_order"
+    },
+    {
+      "id": "check_order",
+      "name": "Check Order Eligibility",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/eligibility",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_request_type",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_request_type",
+      "name": "Branch by Request Type",
+      "type": "branch",
+      "branches": [
+        {"condition": "Customer wants an exchange", "variable": "request_type", "operator": "eq", "value": "exchange", "next_step": "process_exchange"},
+        {"condition": "Customer wants a return", "variable": "request_type", "operator": "eq", "value": "return", "next_step": "process_return"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "process_exchange",
+      "name": "Process Exchange",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/exchange",
+      "function_method": "POST",
+      "function_body": {"reason": "{{reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "process_return",
+      "name": "Process Return",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/return",
+      "function_method": "POST",
+      "function_body": {"reason": "{{reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "Confirm Request",
+      "type": "message",
+      "message_content": "Your {{request_type}} request for order {{order_id}} has been submitted. You will receive a prepaid shipping label via email within 24 hours.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["exchange-return", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "returns-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I encountered an issue processing your request. Let me connect you with a human agent who can help.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.85,
+    "reasoning": "Exchange and return processing follows clear rules but may require human judgment for complex cases",
+    "estimated_resolution_rate": 0.75
+  }
+}

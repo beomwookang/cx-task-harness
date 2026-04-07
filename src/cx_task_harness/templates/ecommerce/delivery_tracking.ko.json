@@ -1,0 +1,104 @@
+{
+  "id": "ecommerce-delivery-tracking",
+  "name": "배송 상태 조회",
+  "description": "고객의 배송 상태 문의를 처리하고, 배송 추적 정보를 확인하여 안내합니다",
+  "industry": "ecommerce",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 배송 상태를 확인하고 싶어합니다",
+    "keywords": ["배송조회", "배송 상태", "택배", "어디쯤", "언제 와요", "배송 확인", "운송장"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "조회할 주문 번호"},
+    {"key": "tracking_status", "type": "string", "description": "배송사의 현재 배송 상태"}
+  ],
+  "steps": [
+    {
+      "id": "collect_order_id",
+      "name": "주문 번호 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 고객 상담 에이전트 (배송 문의 담당)",
+        "conversation_flow": [
+          "고객에게 인사합니다",
+          "주문 번호를 여쭤봅니다",
+          "주문 번호를 고객과 확인합니다"
+        ],
+        "exit_conditions": ["주문 번호가 수집되고 고객이 확인함"],
+        "exceptions": [
+          "주문 번호를 모르는 경우, 이메일로 조회를 안내합니다",
+          "운송장 번호를 제공하는 경우 해당 번호를 사용합니다"
+        ]
+      },
+      "next_step": "check_tracking"
+    },
+    {
+      "id": "check_tracking",
+      "name": "배송 상태 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/tracking",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_status",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_status",
+      "name": "배송 상태별 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "배송 중인 경우", "variable": "tracking_status", "operator": "eq", "value": "in_transit", "next_step": "in_transit_message"},
+        {"condition": "배송 완료된 경우", "variable": "tracking_status", "operator": "eq", "value": "delivered", "next_step": "delivered_message"},
+        {"condition": "배송 지연 중인 경우", "variable": "tracking_status", "operator": "eq", "value": "delayed", "next_step": "delayed_message"}
+      ],
+      "default_branch": "assign_to_human"
+    },
+    {
+      "id": "in_transit_message",
+      "name": "배송 중 안내",
+      "type": "message",
+      "message_content": "주문 {{order_id}}은(는) 현재 배송 중입니다. 주문 확인 이메일에 포함된 배송 추적 링크를 통해 실시간으로 확인하실 수 있습니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "delivered_message",
+      "name": "배송 완료 안내",
+      "type": "message",
+      "message_content": "주문 {{order_id}}은(는) 배송 완료되었습니다. 받지 못하셨다면 이웃 또는 건물 안내 데스크에 확인해 보시기 바랍니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "delayed_message",
+      "name": "배송 지연 안내",
+      "type": "message",
+      "message_content": "죄송합니다. 주문 {{order_id}}의 배송이 지연되고 있습니다. 24시간 이내에 업데이트를 보내드리겠습니다.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["배송조회", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "배송팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 배송 정보를 불러오는 데 문제가 발생했습니다. 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.95,
+    "reasoning": "배송 조회는 매우 반복적이며 실시간 배송사 API 연동으로 완전 자동화가 가능합니다",
+    "estimated_resolution_rate": 0.88
+  }
+}

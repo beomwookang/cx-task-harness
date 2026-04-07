@@ -1,0 +1,117 @@
+{
+  "id": "travel-reservation-cancel",
+  "name": "예약 취소",
+  "description": "여행 예약 취소 요청을 처리하고, 취소 정책을 확인하여 환불을 진행합니다",
+  "industry": "travel",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 여행 예약을 취소하고 싶어합니다",
+    "keywords": ["예약 취소", "예약 취소해주세요", "여행 취소", "호텔 취소", "항공권 취소"]
+  },
+  "memory": [
+    {"key": "reservation_id", "type": "string", "description": "취소할 예약 번호"},
+    {"key": "cancel_reason", "type": "string", "description": "취소 사유"},
+    {"key": "cancelable", "type": "string", "description": "취소 가능 여부"},
+    {"key": "penalty_amount", "type": "string", "description": "적용되는 위약금 금액"}
+  ],
+  "steps": [
+    {
+      "id": "collect_info",
+      "name": "예약 정보 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 여행 상담 에이전트 (예약 취소 담당)",
+        "conversation_flow": [
+          "고객에게 인사합니다",
+          "예약 번호 또는 예약 레퍼런스를 여쭤봅니다",
+          "취소 사유를 여쭤봅니다",
+          "취소 요청을 고객과 최종 확인합니다"
+        ],
+        "exit_conditions": ["예약 번호와 취소 사유가 모두 수집되고 고객이 확인함"],
+        "exceptions": [
+          "예약 번호를 모르는 경우, 성함과 여행 날짜로 조회합니다",
+          "고객이 힘든 상황에 처한 경우, 먼저 공감한 후 진행합니다"
+        ]
+      },
+      "next_step": "check_reservation"
+    },
+    {
+      "id": "check_reservation",
+      "name": "예약 및 취소 정책 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/cancellation-policy",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_cancelable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_cancelable",
+      "name": "취소 가능 여부 및 위약금 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "무료 취소 가능한 경우", "variable": "cancelable", "operator": "eq", "value": "free", "next_step": "cancel_reservation"},
+        {"condition": "위약금이 있는 경우", "variable": "cancelable", "operator": "eq", "value": "penalty", "next_step": "penalty_message"},
+        {"condition": "취소 불가한 경우", "variable": "cancelable", "operator": "eq", "value": "no", "next_step": "not_cancelable_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "cancel_reservation",
+      "name": "취소 처리",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/cancel",
+      "function_method": "POST",
+      "function_body": {"reason": "{{cancel_reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "취소 완료 및 환불 안내",
+      "type": "message",
+      "message_content": "예약 {{reservation_id}}이(가) 성공적으로 취소되었습니다. 전액 환불은 5~7 영업일 내에 원래 결제 수단으로 처리됩니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "penalty_message",
+      "name": "위약금 안내",
+      "type": "message",
+      "message_content": "예약 {{reservation_id}} 취소 시 {{penalty_amount}}의 위약금이 부과됩니다. 그래도 취소를 진행하시겠습니까?",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "not_cancelable_message",
+      "name": "취소 불가 안내",
+      "type": "message",
+      "message_content": "죄송합니다. 예약 {{reservation_id}}은(는) 환불 불가 조건으로 취소가 불가합니다. 상담원이 가능한 옵션을 안내해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["예약취소", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "예약팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 취소 요청 처리 중 문제가 발생했습니다. 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.82,
+    "reasoning": "예약 취소는 정책에 따른 명확한 규칙이 있지만 위약금 발생 시 인간의 확인이 필요할 수 있습니다",
+    "estimated_resolution_rate": 0.72
+  }
+}

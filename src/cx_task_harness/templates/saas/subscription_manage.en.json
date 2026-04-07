@@ -1,0 +1,113 @@
+{
+  "id": "saas-subscription-manage",
+  "name": "Subscription Change & Cancellation",
+  "description": "Handles customer requests to change subscription plans or cancel their subscription",
+  "industry": "saas",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to change their subscription plan or cancel their subscription",
+    "keywords": ["cancel subscription", "change plan", "upgrade", "downgrade", "unsubscribe", "billing plan"]
+  },
+  "memory": [
+    {"key": "account_id", "type": "string", "description": "The customer account ID"},
+    {"key": "intent", "type": "string", "description": "Whether customer wants to change plan, cancel, or other"},
+    {"key": "new_plan", "type": "string", "description": "The new plan requested (if changing plan)"}
+  ],
+  "steps": [
+    {
+      "id": "collect_account_info",
+      "name": "Collect Account Info and Intent",
+      "type": "agent",
+      "instructions": {
+        "role": "Knowledgeable SaaS support agent handling subscription inquiries",
+        "conversation_flow": [
+          "Greet the customer",
+          "Ask for their account email or account ID",
+          "Ask what they would like to do: change their plan, cancel, or something else",
+          "If changing plan, ask which plan they want to switch to",
+          "Confirm their intent and account details"
+        ],
+        "exit_conditions": ["Account ID and customer intent (change plan, cancel, or other) are collected and confirmed"],
+        "exceptions": [
+          "If the customer is cancelling, ask for their reason to offer retention options",
+          "If the customer doesn't know their account ID, ask for their email address"
+        ]
+      },
+      "next_step": "check_subscription"
+    },
+    {
+      "id": "check_subscription",
+      "name": "Check Current Subscription",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_intent",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_intent",
+      "name": "Branch by Customer Intent",
+      "type": "branch",
+      "branches": [
+        {"condition": "Customer wants to change their plan", "variable": "intent", "operator": "eq", "value": "change_plan", "next_step": "process_plan_change"},
+        {"condition": "Customer wants to cancel", "variable": "intent", "operator": "eq", "value": "cancel", "next_step": "process_cancellation"},
+        {"condition": "Other subscription inquiry", "variable": "intent", "operator": "eq", "value": "other", "next_step": "assign_to_human"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "process_plan_change",
+      "name": "Process Plan Change",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription/change",
+      "function_method": "POST",
+      "function_body": {"new_plan": "{{new_plan}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "process_cancellation",
+      "name": "Process Cancellation",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription/cancel",
+      "function_method": "POST",
+      "function_body": {},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "Confirm Subscription Change",
+      "type": "message",
+      "message_content": "Your subscription has been updated successfully. You will receive a confirmation email with the details of your updated subscription.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["subscription-change", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "billing-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I encountered an issue processing your subscription request. Let me connect you with a billing specialist who can help.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.88,
+    "reasoning": "Subscription changes and cancellations follow clear rules; retention cases may benefit from human intervention",
+    "estimated_resolution_rate": 0.78
+  }
+}

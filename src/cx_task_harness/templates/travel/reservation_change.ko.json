@@ -1,0 +1,108 @@
+{
+  "id": "travel-reservation-change",
+  "name": "예약 변경",
+  "description": "날짜, 인원, 객실 유형 등 여행 예약 변경 요청을 처리합니다",
+  "industry": "travel",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 기존 예약을 변경하고 싶어합니다",
+    "keywords": ["예약 변경", "일정 변경", "날짜 변경", "예약 수정", "변경해주세요"]
+  },
+  "memory": [
+    {"key": "reservation_id", "type": "string", "description": "변경할 예약 번호"},
+    {"key": "change_details", "type": "string", "description": "요청된 변경 사항 상세"},
+    {"key": "changeable", "type": "string", "description": "예약 변경 가능 여부"}
+  ],
+  "steps": [
+    {
+      "id": "collect_info",
+      "name": "예약 정보 및 변경 사항 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 여행 상담 에이전트 (예약 변경 담당)",
+        "conversation_flow": [
+          "고객에게 인사합니다",
+          "예약 번호 또는 예약 레퍼런스를 여쭤봅니다",
+          "어떤 변경을 원하시는지 여쭤봅니다 (날짜, 인원, 객실 유형 등)",
+          "예약 번호와 변경 사항을 고객과 확인합니다"
+        ],
+        "exit_conditions": ["예약 번호와 요청된 변경 사항이 모두 수집되고 확인됨"],
+        "exceptions": [
+          "예약 번호를 모르는 경우, 성함과 체크인 날짜로 조회합니다",
+          "여러 변경 사항이 있는 경우, 모두 수집한 후 진행합니다"
+        ]
+      },
+      "next_step": "check_reservation"
+    },
+    {
+      "id": "check_reservation",
+      "name": "예약 변경 가능 여부 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/changeability",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_changeable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_changeable",
+      "name": "변경 가능 여부에 따른 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "변경 가능한 경우", "variable": "changeable", "operator": "eq", "value": "yes", "next_step": "apply_changes"},
+        {"condition": "변경 불가한 경우", "variable": "changeable", "operator": "eq", "value": "no", "next_step": "not_changeable_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "apply_changes",
+      "name": "예약 변경 적용",
+      "type": "function",
+      "function_url": "https://api.example.com/reservations/{{reservation_id}}/modify",
+      "function_method": "POST",
+      "function_body": {"changes": "{{change_details}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "변경 완료 안내",
+      "type": "message",
+      "message_content": "예약 {{reservation_id}}이(가) 성공적으로 변경되었습니다. 변경된 예약 내용이 담긴 확인 이메일이 곧 발송됩니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "not_changeable_message",
+      "name": "변경 불가 안내",
+      "type": "message",
+      "message_content": "죄송합니다. 예약 {{reservation_id}}은(는) 현재 예약 정책에 따라 변경이 불가합니다. 상담원이 가능한 옵션을 안내해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["예약변경", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "예약팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 요청을 처리하는 중 문제가 발생했습니다. 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.80,
+    "reasoning": "예약 변경은 명확한 규칙을 따르지만 복잡한 경우 사람의 개입이 필요할 수 있습니다",
+    "estimated_resolution_rate": 0.70
+  }
+}

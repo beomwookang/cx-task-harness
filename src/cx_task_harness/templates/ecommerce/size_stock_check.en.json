@@ -1,0 +1,91 @@
+{
+  "id": "ecommerce-size-stock-check",
+  "name": "Size & Stock Availability Check",
+  "description": "Handles customer inquiries about product size and stock availability",
+  "industry": "ecommerce",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to check if a product is available in a specific size or if it is in stock",
+    "keywords": ["in stock", "available", "size", "out of stock", "do you have", "stock check"]
+  },
+  "memory": [
+    {"key": "product_id", "type": "string", "description": "The product ID to check"},
+    {"key": "size", "type": "string", "description": "The requested size"},
+    {"key": "stock_status", "type": "string", "description": "Stock availability status"}
+  ],
+  "steps": [
+    {
+      "id": "collect_product_info",
+      "name": "Collect Product Information",
+      "type": "agent",
+      "instructions": {
+        "role": "Helpful customer support agent for product availability inquiries",
+        "conversation_flow": [
+          "Greet the customer",
+          "Ask for the product name or product ID",
+          "Ask for the desired size or variant",
+          "Confirm the product and size details"
+        ],
+        "exit_conditions": ["Product ID (or name) and desired size are both collected and confirmed"],
+        "exceptions": [
+          "If the customer doesn't know the product ID, ask for the product name or SKU",
+          "If the customer doesn't specify a size, ask which size they are interested in"
+        ]
+      },
+      "next_step": "check_stock"
+    },
+    {
+      "id": "check_stock",
+      "name": "Check Stock Availability",
+      "type": "function",
+      "function_url": "https://api.example.com/products/{{product_id}}/stock?size={{size}}",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_availability",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_availability",
+      "name": "Branch by Stock Availability",
+      "type": "branch",
+      "branches": [
+        {"condition": "Product is in stock", "variable": "stock_status", "operator": "eq", "value": "available", "next_step": "available_message"},
+        {"condition": "Product is out of stock", "variable": "stock_status", "operator": "eq", "value": "out_of_stock", "next_step": "unavailable_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "available_message",
+      "name": "Stock Available",
+      "type": "message",
+      "message_content": "Great news! The product you requested (size: {{size}}) is currently in stock. You can add it to your cart now.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "unavailable_message",
+      "name": "Out of Stock",
+      "type": "message",
+      "message_content": "We're sorry, the product you requested (size: {{size}}) is currently out of stock. Would you like to be notified when it becomes available?",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["stock-inquiry", "automated"]}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I couldn't retrieve stock information right now. Please check our website or contact us again shortly.",
+      "next_step": "close_action"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.97,
+    "reasoning": "Stock availability checks are fully automatable with real-time inventory API integration",
+    "estimated_resolution_rate": 0.95
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "id": "medical-appointment-change",
+  "name": "Appointment Rescheduling",
+  "description": "Handles patient requests to reschedule medical appointments, checks availability, and confirms new appointment time",
+  "industry": "medical",
+  "locale": "en",
+  "trigger": {
+    "intent": "Patient wants to reschedule a medical appointment",
+    "keywords": ["reschedule", "change appointment", "move appointment", "different time", "change my appointment"]
+  },
+  "memory": [
+    {"key": "patient_id", "type": "string", "description": "The patient ID"},
+    {"key": "appointment_id", "type": "string", "description": "The current appointment ID to reschedule"},
+    {"key": "preferred_datetime", "type": "string", "description": "Patient's preferred new date and time"},
+    {"key": "reschedulable", "type": "string", "description": "Whether the appointment can be rescheduled"}
+  ],
+  "steps": [
+    {
+      "id": "collect_patient_info",
+      "name": "Collect Patient Info and Current Appointment",
+      "type": "agent",
+      "instructions": {
+        "role": "Empathetic medical support agent handling appointment rescheduling",
+        "conversation_flow": [
+          "Greet the patient warmly",
+          "Ask for their name and patient ID or date of birth for verification",
+          "Ask for their current appointment date and doctor's name",
+          "Ask for their preferred new date and time",
+          "Confirm all details with the patient"
+        ],
+        "exit_conditions": ["Patient ID, current appointment details, and preferred new datetime are all collected and confirmed"],
+        "exceptions": [
+          "If the patient does not know their patient ID, ask for date of birth and full name",
+          "If the patient is calling due to an emergency, escalate to human agent immediately"
+        ]
+      },
+      "next_step": "check_appointment"
+    },
+    {
+      "id": "check_appointment",
+      "name": "Check Appointment Reschedulability",
+      "type": "function",
+      "function_url": "https://api.example.com/appointments/{{appointment_id}}/reschedule-check",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_reschedulable",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_reschedulable",
+      "name": "Branch by Reschedulability",
+      "type": "branch",
+      "branches": [
+        {"condition": "Appointment can be rescheduled", "variable": "reschedulable", "operator": "eq", "value": "yes", "next_step": "reschedule_appointment"},
+        {"condition": "Too late to reschedule online", "variable": "reschedulable", "operator": "eq", "value": "too_late", "next_step": "too_late_message"}
+      ],
+      "default_branch": "assign_to_human"
+    },
+    {
+      "id": "reschedule_appointment",
+      "name": "Reschedule Appointment",
+      "type": "function",
+      "function_url": "https://api.example.com/appointments/{{appointment_id}}/reschedule",
+      "function_method": "POST",
+      "function_body": {"patient_id": "{{patient_id}}", "preferred_datetime": "{{preferred_datetime}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "Confirm New Appointment Time",
+      "type": "message",
+      "message_content": "Your appointment has been successfully rescheduled to {{preferred_datetime}}. A confirmation with the appointment details will be sent to your registered email and phone number.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "too_late_message",
+      "name": "Too Late to Reschedule",
+      "type": "message",
+      "message_content": "We're sorry, your appointment is within the next 24 hours and cannot be rescheduled online. Please call our clinic directly to make last-minute changes.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["appointment-reschedule", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "scheduling-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I encountered an issue processing your rescheduling request. Let me connect you with our scheduling team who can assist you.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.83,
+    "reasoning": "Appointment rescheduling is highly automatable when calendar availability API is integrated; last-minute changes require human handling",
+    "estimated_resolution_rate": 0.75
+  }
+}

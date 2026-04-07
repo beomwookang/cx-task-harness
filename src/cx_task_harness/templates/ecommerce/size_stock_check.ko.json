@@ -1,0 +1,91 @@
+{
+  "id": "ecommerce-size-stock-check",
+  "name": "사이즈 및 재고 확인",
+  "description": "고객의 상품 사이즈 및 재고 문의를 처리합니다",
+  "industry": "ecommerce",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 특정 사이즈 또는 재고 여부를 확인하고 싶어합니다",
+    "keywords": ["재고", "사이즈", "품절", "있나요", "재고 확인", "입고"]
+  },
+  "memory": [
+    {"key": "product_id", "type": "string", "description": "조회할 상품 ID"},
+    {"key": "size", "type": "string", "description": "요청 사이즈"},
+    {"key": "stock_status", "type": "string", "description": "재고 상태"}
+  ],
+  "steps": [
+    {
+      "id": "collect_product_info",
+      "name": "상품 정보 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 고객 상담 에이전트 (상품 재고 문의 담당)",
+        "conversation_flow": [
+          "고객에게 인사합니다",
+          "상품명 또는 상품 번호를 여쭤봅니다",
+          "원하시는 사이즈를 여쭤봅니다",
+          "상품과 사이즈 정보를 확인합니다"
+        ],
+        "exit_conditions": ["상품 ID(또는 이름)와 원하는 사이즈가 모두 수집되고 확인됨"],
+        "exceptions": [
+          "상품 번호를 모르는 경우, 상품명 또는 SKU로 안내합니다",
+          "사이즈를 명시하지 않은 경우, 원하는 사이즈를 여쭤봅니다"
+        ]
+      },
+      "next_step": "check_stock"
+    },
+    {
+      "id": "check_stock",
+      "name": "재고 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/products/{{product_id}}/stock?size={{size}}",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_availability",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_availability",
+      "name": "재고 여부에 따른 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "재고 있음", "variable": "stock_status", "operator": "eq", "value": "available", "next_step": "available_message"},
+        {"condition": "품절", "variable": "stock_status", "operator": "eq", "value": "out_of_stock", "next_step": "unavailable_message"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "available_message",
+      "name": "재고 있음 안내",
+      "type": "message",
+      "message_content": "좋은 소식입니다! 요청하신 상품(사이즈: {{size}})은 현재 재고가 있습니다. 지금 바로 장바구니에 담으실 수 있습니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "unavailable_message",
+      "name": "품절 안내",
+      "type": "message",
+      "message_content": "죄송합니다. 요청하신 상품(사이즈: {{size}})은 현재 품절 상태입니다. 재입고 시 알림을 받으시겠습니까?",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["재고문의", "자동처리"]}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 현재 재고 정보를 불러올 수 없습니다. 잠시 후 다시 확인해 주시거나 홈페이지를 방문해 주세요.",
+      "next_step": "close_action"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.97,
+    "reasoning": "재고 확인은 실시간 재고 API 연동으로 완전 자동화가 가능한 단순 조회 업무입니다",
+    "estimated_resolution_rate": 0.95
+  }
+}

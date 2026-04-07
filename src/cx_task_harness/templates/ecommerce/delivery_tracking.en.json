@@ -1,0 +1,104 @@
+{
+  "id": "ecommerce-delivery-tracking",
+  "name": "Delivery Status Inquiry",
+  "description": "Handles customer inquiries about delivery status, checks tracking information, and provides updates",
+  "industry": "ecommerce",
+  "locale": "en",
+  "trigger": {
+    "intent": "Customer wants to know the status of their delivery",
+    "keywords": ["tracking", "delivery", "where is my order", "shipping status", "package", "when will it arrive"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "The order ID to track"},
+    {"key": "tracking_status", "type": "string", "description": "Current tracking status from carrier"}
+  ],
+  "steps": [
+    {
+      "id": "collect_order_id",
+      "name": "Collect Order ID",
+      "type": "agent",
+      "instructions": {
+        "role": "Helpful customer support agent handling delivery inquiries",
+        "conversation_flow": [
+          "Greet the customer",
+          "Ask for the order ID or order number",
+          "Confirm the order ID with the customer"
+        ],
+        "exit_conditions": ["Order ID is collected and confirmed by the customer"],
+        "exceptions": [
+          "If the customer doesn't have their order ID, ask for their email address to look it up",
+          "If the customer provides a tracking number instead of an order ID, accept it"
+        ]
+      },
+      "next_step": "check_tracking"
+    },
+    {
+      "id": "check_tracking",
+      "name": "Check Tracking Status",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/tracking",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_status",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_status",
+      "name": "Branch by Delivery Status",
+      "type": "branch",
+      "branches": [
+        {"condition": "Order is in transit", "variable": "tracking_status", "operator": "eq", "value": "in_transit", "next_step": "in_transit_message"},
+        {"condition": "Order has been delivered", "variable": "tracking_status", "operator": "eq", "value": "delivered", "next_step": "delivered_message"},
+        {"condition": "Order is delayed", "variable": "tracking_status", "operator": "eq", "value": "delayed", "next_step": "delayed_message"}
+      ],
+      "default_branch": "assign_to_human"
+    },
+    {
+      "id": "in_transit_message",
+      "name": "In Transit Status Update",
+      "type": "message",
+      "message_content": "Your order {{order_id}} is currently in transit and on its way to you. You can track it using the tracking link in your confirmation email.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "delivered_message",
+      "name": "Delivered Status Update",
+      "type": "message",
+      "message_content": "Your order {{order_id}} has been delivered. If you haven't received it, please check with neighbors or your building's reception area.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "delayed_message",
+      "name": "Delayed Status Update",
+      "type": "message",
+      "message_content": "We're sorry, your order {{order_id}} is experiencing a delay. Our team is working to resolve this. We will send you an update within 24 hours.",
+      "next_step": "assign_to_human"
+    },
+    {
+      "id": "close_action",
+      "name": "Close Conversation",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["delivery-inquiry", "automated"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "Assign to Human Agent",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "shipping-team"}
+    },
+    {
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "message",
+      "message_content": "I'm sorry, I couldn't retrieve your tracking information right now. Let me connect you with a human agent who can help.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.95,
+    "reasoning": "Delivery tracking inquiries are highly repetitive and can be fully automated with real-time carrier API integration",
+    "estimated_resolution_rate": 0.88
+  }
+}

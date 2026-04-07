@@ -1,0 +1,113 @@
+{
+  "id": "saas-subscription-manage",
+  "name": "구독 변경 및 해지",
+  "description": "구독 플랜 변경 또는 구독 해지 요청을 처리합니다",
+  "industry": "saas",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 구독 플랜을 변경하거나 구독을 해지하고 싶어합니다",
+    "keywords": ["구독 해지", "플랜 변경", "업그레이드", "다운그레이드", "구독 취소", "요금제 변경"]
+  },
+  "memory": [
+    {"key": "account_id", "type": "string", "description": "고객 계정 ID"},
+    {"key": "intent", "type": "string", "description": "플랜 변경, 해지 또는 기타 여부"},
+    {"key": "new_plan", "type": "string", "description": "변경할 새 플랜(플랜 변경 시)"}
+  ],
+  "steps": [
+    {
+      "id": "collect_account_info",
+      "name": "계정 정보 및 요청 사항 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 SaaS 고객 상담 에이전트 (구독 문의 담당)",
+        "conversation_flow": [
+          "고객에게 인사합니다",
+          "계정 이메일 또는 계정 ID를 여쭤봅니다",
+          "플랜 변경, 해지, 기타 중 무엇을 원하시는지 여쭤봅니다",
+          "플랜 변경 시, 어떤 플랜으로 변경을 원하시는지 여쭤봅니다",
+          "요청 사항과 계정 정보를 확인합니다"
+        ],
+        "exit_conditions": ["계정 ID와 고객 요청(플랜 변경, 해지, 기타)이 모두 수집되고 확인됨"],
+        "exceptions": [
+          "해지를 요청하는 경우, 사유를 여쭤보고 유지 방안을 안내합니다",
+          "계정 ID를 모르는 경우, 이메일 주소로 안내합니다"
+        ]
+      },
+      "next_step": "check_subscription"
+    },
+    {
+      "id": "check_subscription",
+      "name": "현재 구독 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_intent",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_intent",
+      "name": "요청 유형에 따른 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "플랜 변경을 원하는 경우", "variable": "intent", "operator": "eq", "value": "change_plan", "next_step": "process_plan_change"},
+        {"condition": "구독 해지를 원하는 경우", "variable": "intent", "operator": "eq", "value": "cancel", "next_step": "process_cancellation"},
+        {"condition": "기타 문의인 경우", "variable": "intent", "operator": "eq", "value": "other", "next_step": "assign_to_human"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "process_plan_change",
+      "name": "플랜 변경 처리",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription/change",
+      "function_method": "POST",
+      "function_body": {"new_plan": "{{new_plan}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "process_cancellation",
+      "name": "구독 해지 처리",
+      "type": "function",
+      "function_url": "https://api.example.com/accounts/{{account_id}}/subscription/cancel",
+      "function_method": "POST",
+      "function_body": {},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "구독 변경 완료 안내",
+      "type": "message",
+      "message_content": "구독이 성공적으로 업데이트되었습니다. 변경된 구독 내용이 담긴 확인 이메일이 발송됩니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["구독변경", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "결제팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 구독 요청 처리 중 문제가 발생했습니다. 결제 전문 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.88,
+    "reasoning": "구독 변경 및 해지는 명확한 규칙을 따르며, 고객 유지가 필요한 경우 사람의 개입이 도움이 될 수 있습니다",
+    "estimated_resolution_rate": 0.78
+  }
+}

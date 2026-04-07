@@ -1,0 +1,112 @@
+{
+  "id": "ecommerce-exchange-return",
+  "name": "교환 및 반품 처리",
+  "description": "고객의 교환 및 반품 요청을 처리하고, 주문 자격을 확인한 후 처리합니다",
+  "industry": "ecommerce",
+  "locale": "ko",
+  "trigger": {
+    "intent": "고객이 제품을 교환하거나 반품하고 싶어합니다",
+    "keywords": ["교환", "반품", "반환", "교체", "돌려보내기", "환불 요청"]
+  },
+  "memory": [
+    {"key": "order_id", "type": "string", "description": "교환 또는 반품할 주문 번호"},
+    {"key": "request_type", "type": "string", "description": "교환 또는 반품 여부"},
+    {"key": "reason", "type": "string", "description": "교환 또는 반품 사유"}
+  ],
+  "steps": [
+    {
+      "id": "collect_info",
+      "name": "교환/반품 정보 수집",
+      "type": "agent",
+      "instructions": {
+        "role": "친절한 고객 상담 에이전트 (교환 및 반품 담당)",
+        "conversation_flow": [
+          "고객에게 친절하게 인사합니다",
+          "교환을 원하시는지 반품을 원하시는지 여쭤봅니다",
+          "주문 번호를 확인합니다",
+          "교환 또는 반품 사유를 여쭤봅니다",
+          "요청 내용을 고객과 최종 확인합니다"
+        ],
+        "exit_conditions": ["주문 번호, 요청 유형(교환 또는 반품), 사유가 모두 수집되고 고객이 확인함"],
+        "exceptions": [
+          "주문 번호를 모르는 경우, 이메일로 조회를 안내합니다",
+          "고객이 불만을 표현하는 경우, 먼저 공감한 후 진행합니다"
+        ]
+      },
+      "next_step": "check_order"
+    },
+    {
+      "id": "check_order",
+      "name": "주문 자격 확인",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/eligibility",
+      "function_method": "GET",
+      "function_headers": {"Authorization": "Bearer {{api_key}}"},
+      "next_step": "branch_request_type",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "branch_request_type",
+      "name": "요청 유형에 따른 분기",
+      "type": "branch",
+      "branches": [
+        {"condition": "교환을 원하는 경우", "variable": "request_type", "operator": "eq", "value": "exchange", "next_step": "process_exchange"},
+        {"condition": "반품을 원하는 경우", "variable": "request_type", "operator": "eq", "value": "return", "next_step": "process_return"}
+      ],
+      "default_branch": "error_handler"
+    },
+    {
+      "id": "process_exchange",
+      "name": "교환 처리",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/exchange",
+      "function_method": "POST",
+      "function_body": {"reason": "{{reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "process_return",
+      "name": "반품 처리",
+      "type": "function",
+      "function_url": "https://api.example.com/orders/{{order_id}}/return",
+      "function_method": "POST",
+      "function_body": {"reason": "{{reason}}"},
+      "next_step": "confirm_message",
+      "on_failure": "error_handler"
+    },
+    {
+      "id": "confirm_message",
+      "name": "요청 확인 안내",
+      "type": "message",
+      "message_content": "주문 {{order_id}}에 대한 {{request_type}} 요청이 접수되었습니다. 24시간 이내에 선불 배송 레이블이 이메일로 발송됩니다.",
+      "next_step": "close_action"
+    },
+    {
+      "id": "close_action",
+      "name": "상담 종료",
+      "type": "action",
+      "action_type": "close",
+      "action_params": {"tags": ["교환반품", "자동처리"]}
+    },
+    {
+      "id": "assign_to_human",
+      "name": "상담원 연결",
+      "type": "action",
+      "action_type": "assign_team",
+      "action_params": {"team": "반품팀"}
+    },
+    {
+      "id": "error_handler",
+      "name": "오류 처리",
+      "type": "message",
+      "message_content": "죄송합니다. 요청을 처리하는 중 문제가 발생했습니다. 상담원에게 연결해 드리겠습니다.",
+      "next_step": "assign_to_human"
+    }
+  ],
+  "automation_potential": {
+    "score": 0.85,
+    "reasoning": "교환 및 반품 처리는 명확한 규칙을 따르지만 복잡한 경우에는 사람의 판단이 필요할 수 있습니다",
+    "estimated_resolution_rate": 0.75
+  }
+}
