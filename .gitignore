@@ -6,6 +6,11 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
-.omc/state/
-.omc/sessions/
 uv.lock
+
+# Internal project files (not for open-source repo)
+.omc/
+.ouroboros/
+docs/superpowers/
+BACKGROUND.md
+DESIGN.md
