@@ -5,14 +5,14 @@ from __future__ import annotations
 _DEFAULT_POS = [250, 300]
 
 
-def _base_node(node_id: str, name: str, node_type: str, type_version: int = 1) -> dict:
+def _base_node(node_id: str, name: str, node_type: str, type_version: int | float = 1) -> dict:
     return {
+        "parameters": {},
         "id": node_id,
         "name": name,
         "type": node_type,
         "typeVersion": type_version,
         "position": list(_DEFAULT_POS),
-        "parameters": {},
     }
 
 
@@ -21,16 +21,15 @@ def make_manual_trigger(node_id: str = "trigger") -> dict:
 
 
 def make_set_node(node_id: str, name: str, assignments: dict) -> dict:
-    node = _base_node(node_id, name, "n8n-nodes-base.set", type_version=3)
+    node = _base_node(node_id, name, "n8n-nodes-base.set", type_version=3.3)
     node["parameters"] = {
-        "mode": "manual",
-        "duplicateItem": False,
         "assignments": {
             "assignments": [
                 {"id": f"{node_id}_{k}", "name": k, "value": v, "type": "string"}
                 for k, v in assignments.items()
             ]
         },
+        "options": {},
     }
     return node
 
@@ -38,9 +37,9 @@ def make_set_node(node_id: str, name: str, assignments: dict) -> dict:
 def make_code_node(node_id: str, name: str, code: str, language: str) -> dict:
     node = _base_node(node_id, name, "n8n-nodes-base.code", type_version=2)
     if language == "python":
-        node["parameters"] = {"language": "python", "pythonCode": code}
+        node["parameters"] = {"language": "python", "pythonCode": code, "options": {}}
     else:
-        node["parameters"] = {"jsCode": code}
+        node["parameters"] = {"jsCode": code, "options": {}}
     return node
 
 
@@ -52,7 +51,7 @@ def make_http_request_node(
     headers: dict | None = None,
     body: dict | None = None,
 ) -> dict:
-    node = _base_node(node_id, name, "n8n-nodes-base.httpRequest", type_version=4)
+    node = _base_node(node_id, name, "n8n-nodes-base.httpRequest", type_version=4.2)
     node["parameters"] = {
         "url": url,
         "method": method,
@@ -85,10 +84,15 @@ def make_if_node(node_id: str, name: str, conditions: list[dict]) -> dict:
         })
     node["parameters"] = {
         "conditions": {
-            "options": {"caseSensitive": True, "leftValue": ""},
+            "options": {
+                "caseSensitive": True,
+                "leftValue": "",
+                "typeValidation": "strict",
+            },
             "conditions": n8n_conditions,
             "combinator": "and",
         },
+        "options": {},
     }
     return node
 
@@ -116,7 +120,7 @@ def make_switch_node(node_id: str, name: str, conditions: list[dict]) -> dict:
 
 
 def make_ai_agent_node(node_id: str, name: str, system_message: str) -> dict:
-    node = _base_node(node_id, name, "@n8n/n8n-nodes-langchain.agent", type_version=1)
+    node = _base_node(node_id, name, "@n8n/n8n-nodes-langchain.agent", type_version=1.6)
     node["parameters"] = {
         "text": "={{ $json.chatInput }}",
         "options": {"systemMessage": system_message},

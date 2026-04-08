@@ -15,7 +15,7 @@
           "id": {"type": "string"},
           "name": {"type": "string"},
           "type": {"type": "string"},
-          "typeVersion": {"type": "integer", "minimum": 1},
+          "typeVersion": {"type": "number", "minimum": 1},
           "position": {
             "type": "array",
             "items": {"type": "number"},
