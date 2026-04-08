@@ -1,6 +1,6 @@
 {
   "name": "cx-task-harness",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Customer Support Automation Architect — validates CX Task Specs and converts them to n8n workflows",
   "author": {
     "name": "beomwookang"

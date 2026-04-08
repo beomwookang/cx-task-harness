@@ -1,6 +1,6 @@
 [project]
 name = "cx-task-harness"
-version = "0.2.1"
+version = "0.2.2"
 description = "MCP server that validates CX Task Specs and converts them to n8n workflows"
 readme = "README.md"
 license = "MIT"

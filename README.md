@@ -245,6 +245,15 @@ cx-task-harness/
 └── tests/                     # 88 tests (unit + integration + e2e)
 ```
 
+## Compatibility
+
+| Dependency | Required Version |
+|-----------|-----------------|
+| Python | 3.11+ |
+| n8n | **1.60+** (2024~) |
+
+Generated workflows use n8n node typeVersions that require n8n 1.60 or later (Set v3.3, Switch v3.2, HTTP Request v4.2, AI Agent v1.6). Older n8n versions may fail to import.
+
 ## Tech Stack
 
 | Component | Technology |
