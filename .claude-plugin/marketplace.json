@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Customer Support Automation Architect for Claude Code",
-    "version": "0.2.0"
+    "version": "0.2.1"
   },
   "plugins": [
     {
       "name": "cx-task-harness",
       "description": "Validates CX Task Specs and converts them to n8n workflows. Includes industry templates, smart validation, and setup guides.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "beomwookang"
       },
