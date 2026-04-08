@@ -38,6 +38,44 @@ class TestNodeTemplates:
         from cx_task_harness.n8n.node_templates import make_if_node
         node = make_if_node(node_id="if_1", name="Check Status", conditions=[{"variable": "status", "operator": "eq", "value": "active"}])
         assert node["type"] == "n8n-nodes-base.if"
+        params = node["parameters"]
+        assert "conditions" in params
+        assert params["conditions"]["combinator"] == "and"
+        assert len(params["conditions"]["conditions"]) == 1
+        cond = params["conditions"]["conditions"][0]
+        assert cond["leftValue"] == "={{ $json.status }}"
+        assert cond["rightValue"] == "active"
+        assert cond["operator"]["operation"] == "equals"
+
+    def test_switch_node(self):
+        from cx_task_harness.n8n.node_templates import make_switch_node
+        node = make_switch_node(
+            node_id="sw_1",
+            name="Route Category",
+            conditions=[
+                {"variable": "category", "operator": "eq", "value": "bathroom"},
+                {"variable": "category", "operator": "eq", "value": "kitchen"},
+            ],
+        )
+        assert node["type"] == "n8n-nodes-base.switch"
+        assert node["typeVersion"] == 3.2
+        params = node["parameters"]
+        assert params["mode"] == "rules"
+        assert params["options"]["fallbackOutput"] == "extra"
+        values = params["rules"]["values"]
+        assert len(values) == 2
+        # First rule
+        v0 = values[0]
+        assert v0["outputKey"] == "bathroom"
+        assert v0["conditions"]["combinator"] == "and"
+        assert len(v0["conditions"]["conditions"]) == 1
+        c0 = v0["conditions"]["conditions"][0]
+        assert c0["leftValue"] == "={{ $json.category }}"
+        assert c0["rightValue"] == "bathroom"
+        assert c0["operator"]["type"] == "string"
+        assert c0["operator"]["operation"] == "equals"
+        # Second rule
+        assert values[1]["outputKey"] == "kitchen"
 
     def test_ai_agent_node(self):
         from cx_task_harness.n8n.node_templates import make_ai_agent_node

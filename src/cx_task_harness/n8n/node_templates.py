@@ -98,23 +98,36 @@ def make_if_node(node_id: str, name: str, conditions: list[dict]) -> dict:
 
 
 def make_switch_node(node_id: str, name: str, conditions: list[dict]) -> dict:
-    """Creates an n8n Switch node that supports N output branches."""
-    node = _base_node(node_id, name, "n8n-nodes-base.switch", type_version=3)
-    rules = []
+    """Creates an n8n Switch node (V3.2) that supports N output branches."""
+    node = _base_node(node_id, name, "n8n-nodes-base.switch", type_version=3.2)
+    values = []
     for i, cond in enumerate(conditions):
-        rules.append({
-            "id": f"{node_id}_rule_{i}",
-            "leftValue": f"={{{{ $json.{cond.get('variable', 'value')} }}}}",
-            "rightValue": cond.get("value", ""),
-            "operator": {
-                "type": "string",
-                "operation": _map_operator(cond.get("operator", "eq")),
+        values.append({
+            "conditions": {
+                "options": {
+                    "caseSensitive": True,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                },
+                "conditions": [
+                    {
+                        "id": f"{node_id}_rule_{i}",
+                        "leftValue": f"={{{{ $json.{cond.get('variable', 'value')} }}}}",
+                        "rightValue": cond.get("value", ""),
+                        "operator": {
+                            "type": "string",
+                            "operation": _map_operator(cond.get("operator", "eq")),
+                        },
+                    }
+                ],
+                "combinator": "and",
             },
-            "output": i,
+            "outputKey": cond.get("value", f"output_{i}"),
         })
     node["parameters"] = {
-        "rules": {"rules": rules},
-        "options": {},
+        "mode": "rules",
+        "rules": {"values": values},
+        "options": {"fallbackOutput": "extra"},
     }
     return node
 
